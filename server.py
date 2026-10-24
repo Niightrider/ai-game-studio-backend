@@ -1,4 +1,5 @@
 import os
+import re
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -13,9 +14,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configuramos Groq (Gratuito y compatible con el formato OpenAI)
+# Configuración del cliente Groq
 client = openai.OpenAI(
-    api_key=os.environ.get("GROQ_API_KEY", "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"),
+    api_key=os.environ.get("GROQ_API_KEY"),
     base_url="https://api.groq.com/openai/v1"
 )
 
@@ -49,25 +50,27 @@ async def generate_game(request: GameRequest):
             "3. Declara las funciones preload(), create() y update() de forma limpia.\n"
             "4. Dibuja los gráficos usando 'this.add.graphics()' y programa los controles táctiles con 'this.input.on(\"pointermove\", ...)'."
         )
-            "4. CONTROLES TÁCTILES: Usa 'this.input.on(\"pointermove\", ...)' o 'pointerdown' para mover al personaje con el dedo.\n"
-            "5. Incluye puntuación, colisiones y lógica de juego completa."
-        )
+
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": request.prompt}
             ],
-            temperature=0.7
+            temperature=0.6
         )
 
-        game_logic_code = response.choices[0].message.content
+        raw_code = response.choices[0].message.content
+
+        # Limpieza estricta de bloques Markdown
+        cleaned_code = re.sub(r"^```(?:javascript|js)?\n?", "", raw_code, flags=re.MULTILINE)
+        cleaned_code = re.sub(r"```$", "", cleaned_code, flags=re.MULTILINE).strip()
 
         return {
             "status": "success",
             "prompt": request.prompt,
             "style": request.style,
-            "code": game_logic_code
+            "code": cleaned_code
         }
 
     except Exception as e:
@@ -75,4 +78,5 @@ async def generate_game(request: GameRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
