@@ -1,4 +1,5 @@
-﻿import os
+import os
+import re
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -13,7 +14,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configuramos Groq (Gratuito y compatible con el formato OpenAI)
+# Configuración de cliente Groq
 client = openai.OpenAI(
     api_key=os.environ.get("GROQ_API_KEY", "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"),
     base_url="https://api.groq.com/openai/v1"
@@ -27,11 +28,15 @@ class GameRequest(BaseModel):
 async def generate_game(request: GameRequest):
     try:
         system_prompt = (
-            "Eres un desarrollador experto en Phaser.js. "
-            "Tu tarea es generar únicamente código JavaScript ejecutable para un juego arcade basado en la petición del usuario. "
-            "El código debe usar Phaser 3, configurar un canvas que ocupe el ancho de la pantalla y el 70% de alto ('game-container'), "
-            "y añadir mecánicas interactivas sencillas acordes al prompt. "
-            "Devuelve EXCLUSIVAMENTE el código JavaScript plano, sin bloques de markdown (sin ```), listo para ejecutarse."
+            "Eres un desarrollador experto en Phaser 3. "
+            "Genera ÚNICAMENTE código JavaScript plano y ejecutable para un juego arcade en 2D. "
+            "REGLAS OBLIGATORIAS:\n"
+            "1. NO uses bloques de markdown como ```javascript o ```. Devuelve SOLO el código JS puro.\n"
+            "2. El contenedor del juego es 'game-container'. Ajusta el canvas al tamaño del contenedor.\n"
+            "3. GRÁFICOS ROBUSTOS: Dibuja las texturas o sprites usando Phaser.GameObjects.Graphics en la función preload() o create() "
+            "(por ejemplo, this.add.graphics() dibujando rectángulos o círculos de colores) para garantizar que los gráficos carguen SIEMPRE al instante sin fallos de red.\n"
+            "4. CONTROLES TÁCTILES: Configura eventos táctiles (como 'this.input.on(\"pointermove\", ...)' o 'pointerdown') para que el jugador se mueva y juegue deslizando el dedo o tocando la pantalla del smartphone.\n"
+            "5. Incluye puntuación, colisiones, lógica de juego clara y condición de fin de juego o reinicio."
         )
 
         response = client.chat.completions.create(
@@ -40,16 +45,20 @@ async def generate_game(request: GameRequest):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": request.prompt}
             ],
-            temperature=0.7
+            temperature=0.6
         )
 
-        game_logic_code = response.choices[0].message.content
+        raw_code = response.choices[0].message.content
+
+        # Limpieza de código Markdown
+        cleaned_code = re.sub(r"^```(?:javascript|js)?\n?", "", raw_code, flags=re.MULTILINE)
+        cleaned_code = re.sub(r"```$", "", cleaned_code, flags=re.MULTILINE).strip()
 
         return {
             "status": "success",
             "prompt": request.prompt,
             "style": request.style,
-            "code": game_logic_code
+            "code": cleaned_code
         }
 
     except Exception as e:
