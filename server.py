@@ -1,5 +1,4 @@
 import os
-import re
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -14,7 +13,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configuración de cliente Groq
+# Configuramos Groq (Gratuito y compatible con el formato OpenAI)
 client = openai.OpenAI(
     api_key=os.environ.get("GROQ_API_KEY", "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"),
     base_url="https://api.groq.com/openai/v1"
@@ -32,33 +31,40 @@ async def generate_game(request: GameRequest):
             "Genera ÚNICAMENTE código JavaScript plano y ejecutable para un juego arcade en 2D. "
             "REGLAS OBLIGATORIAS:\n"
             "1. NO uses bloques de markdown como ```javascript o ```. Devuelve SOLO el código JS puro.\n"
-            "2. El contenedor del juego es 'game-container'. Ajusta el canvas al tamaño del contenedor.\n"
-            "3. GRÁFICOS ROBUSTOS: Dibuja las texturas o sprites usando Phaser.GameObjects.Graphics en la función preload() o create() "
-            "(por ejemplo, this.add.graphics() dibujando rectángulos o círculos de colores) para garantizar que los gráficos carguen SIEMPRE al instante sin fallos de red.\n"
-            "4. CONTROLES TÁCTILES: Configura eventos táctiles (como 'this.input.on(\"pointermove\", ...)' o 'pointerdown') para que el jugador se mueva y juegue deslizando el dedo o tocando la pantalla del smartphone.\n"
-            "5. Incluye puntuación, colisiones, lógica de juego clara y condición de fin de juego o reinicio."
+            "2. CONFIGURACIÓN DE PHASER OBLIGATORIA:\n"
+            "   const config = {\n"
+            "       type: Phaser.AUTO,\n"
+            "       parent: 'game-container',\n"
+            "       scale: {\n"
+            "           mode: Phaser.Scale.FIT,\n"
+            "           autoCenter: Phaser.Scale.CENTER_BOTH,\n"
+            "           width: 800,\n"
+            "           height: 600\n"
+            "       },\n"
+            "       physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },\n"
+            "       scene: { preload: preload, create: create, update: update }\n"
+            "   };\n"
+            "   const game = new Phaser.Game(config);\n"
+            "3. GRÁFICOS: Dibuja los elementos usando 'this.add.graphics()' o formas básicas para garantizar que carguen siempre.\n"
+            "4. CONTROLES TÁCTILES: Usa 'this.input.on(\"pointermove\", ...)' o 'pointerdown' para mover al personaje con el dedo.\n"
+            "5. Incluye puntuación, colisiones y lógica de juego completa."
         )
-
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": request.prompt}
             ],
-            temperature=0.6
+            temperature=0.7
         )
 
-        raw_code = response.choices[0].message.content
-
-        # Limpieza de código Markdown
-        cleaned_code = re.sub(r"^```(?:javascript|js)?\n?", "", raw_code, flags=re.MULTILINE)
-        cleaned_code = re.sub(r"```$", "", cleaned_code, flags=re.MULTILINE).strip()
+        game_logic_code = response.choices[0].message.content
 
         return {
             "status": "success",
             "prompt": request.prompt,
             "style": request.style,
-            "code": cleaned_code
+            "code": game_logic_code
         }
 
     except Exception as e:
