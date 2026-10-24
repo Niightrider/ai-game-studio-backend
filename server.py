@@ -14,7 +14,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Inicializar cliente oficial de Groq (lee automáticamente la variable GROQ_API_KEY de Render)
+# Inicializar cliente oficial de Groq
 client = Groq()
 
 class GameRequest(BaseModel):
@@ -26,10 +26,10 @@ async def generate_game(request: GameRequest):
     system_prompt = (
         "Eres un desarrollador experto en Phaser 3. "
         "Genera ÚNICAMENTE código JavaScript plano, moderno y sintácticamente perfecto para un juego arcade en 2D. "
-        "REGLAS OBLIGATORIAS:\n"
-        "1. NO uses bloques de markdown como ```javascript o ```. Devuelve SOLO el código JS puro.\n"
-        "2. NUNCA hagas asignaciones inválidas (como asignar valores a funciones o constantes).\n"
-        "3. CONFIGURACIÓN DE PHASER:\n"
+        "REGLAS ABSOLUTAS DE SINTAXIS Y FORMATO:\n"
+        "1. NO uses bloques de markdown como ```javascript o ```. Devuelve SOLO el código JS puro, sin ningún texto ni formato adicional.\n"
+        "2. NUNCA escribas asignaciones inválidas en el lado izquierdo. Por ejemplo, JAMÁS escribas expresiones como 'a + b = c' o 'funcion() = 5'. Usa siempre asignaciones de variables directas y correctas (ej: 'score += 1' o 'player.x = 100').\n"
+        "3. CONFIGURACIÓN OBLIGATORIA DE PHASER:\n"
         "   const config = {\n"
         "       type: Phaser.AUTO,\n"
         "       parent: 'game-container',\n"
@@ -44,28 +44,26 @@ async def generate_game(request: GameRequest):
         "   };\n"
         "   if (window.currentGame) { window.currentGame.destroy(true); }\n"
         "   window.currentGame = new Phaser.Game(config);\n"
-        "4. CARGA DE SPRITES:\n"
-        "   Usa URLs limpias en preload():\n"
-        "   this.load.image('player', 'https://image.pollinations.ai/prompt/pixel%20art%20character,%20isolated,%20white%20background');\n"
-        "   this.load.image('enemy', 'https://image.pollinations.ai/prompt/pixel%20art%20enemy,%20isolated,%20white%20background');\n"
-        "5. Define estrictamente las funciones preload(), create() y update() de forma independiente."
+        "4. Define de forma limpia, separada e independiente las funciones preload(), create() y update()."
     )
 
     try:
         completion = client.chat.completions.create(
-            model="openai/gpt-oss-120b",  # El modelo oficial que te indica el panel de Groq
+            model="openai/gpt-oss-120b",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": request.prompt}
             ],
-            temperature=0.7,
+            temperature=0.4,
             max_completion_tokens=2048,
             top_p=1
         )
 
         raw_code = completion.choices[0].message.content
+        if not raw_code:
+            raise HTTPException(status_code=500, detail="La IA devolvió una respuesta vacía.")
 
-        # Limpieza estricta de bloques Markdown
+        # Limpieza estricta de bloques Markdown por seguridad
         cleaned_code = re.sub(r"^```(?:javascript|js)?\n?", "", raw_code, flags=re.MULTILINE)
         cleaned_code = re.sub(r"```$", "", cleaned_code, flags=re.MULTILINE).strip()
 
