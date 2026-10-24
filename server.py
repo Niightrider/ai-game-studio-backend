@@ -3,7 +3,7 @@ import re
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import openai
+from groq import Groq
 
 app = FastAPI(title="AI Game Generator API")
 
@@ -14,13 +14,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Inicializar cliente de Groq de forma segura
-API_KEY = os.environ.get("GROQ_API_KEY", "")
-
-client = openai.OpenAI(
-    api_key=API_KEY,
-    base_url="https://api.groq.com/openai/v1"
-)
+# Inicializar cliente oficial de Groq (lee automáticamente la variable GROQ_API_KEY de Render)
+client = Groq()
 
 class GameRequest(BaseModel):
     prompt: str
@@ -28,9 +23,6 @@ class GameRequest(BaseModel):
 
 @app.post("/generate-game")
 async def generate_game(request: GameRequest):
-    if not API_KEY:
-        raise HTTPException(status_code=500, detail="La variable GROQ_API_KEY no está configurada en el servidor.")
-
     system_prompt = (
         "Eres un desarrollador experto en Phaser 3. "
         "Genera ÚNICAMENTE código JavaScript plano y ejecutable para un juego arcade en 2D. "
@@ -56,20 +48,20 @@ async def generate_game(request: GameRequest):
     )
 
     try:
-        response = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
+        completion = client.chat.completions.create(
+            model="openai/gpt-oss-120b",  # El modelo oficial que te indica el panel de Groq
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": request.prompt}
             ],
-            temperature=0.6
+            temperature=0.7,
+            max_completion_tokens=2048,
+            top_p=1
         )
 
-        raw_code = response.choices[0].message.content
-        if not raw_code:
-            raise HTTPException(status_code=500, response="La IA devolvió una respuesta vacía.")
+        raw_code = completion.choices[0].message.content
 
-        # Limpieza estricta de bloques Markdown por si la IA los incluye
+        # Limpieza estricta de bloques Markdown
         cleaned_code = re.sub(r"^```(?:javascript|js)?\n?", "", raw_code, flags=re.MULTILINE)
         cleaned_code = re.sub(r"```$", "", cleaned_code, flags=re.MULTILINE).strip()
 
@@ -80,16 +72,9 @@ async def generate_game(request: GameRequest):
             "code": cleaned_code
         }
 
-    except openai.APIError as e:
-        print(f"Error de la API de Groq: {e}")
-        raise HTTPException(status_code=502, detail=f"Error en el servicio de IA: {str(e)}")
     except Exception as e:
-        print(f"Error interno del servidor: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error del servidor: {str(e)}")
-
-@app.get("/")
-def root():
-    return {"status": "online", "message": "AI Game Studio Backend funcionando correctamente"}
+        print(f"Error detallado en el servidor: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
