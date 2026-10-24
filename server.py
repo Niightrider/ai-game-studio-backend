@@ -31,7 +31,7 @@ async def generate_game(request: GameRequest):
             "Genera ÚNICAMENTE código JavaScript plano y ejecutable para un juego arcade en 2D. "
             "REGLAS OBLIGATORIAS:\n"
             "1. NO uses bloques de markdown como ```javascript o ```. Devuelve SOLO el código JS puro.\n"
-            "2. CONFIGURACIÓN DE PHASER OBLIGATORIA:\n"
+            "2. CONFIGURACIÓN DE PHASER:\n"
             "   const config = {\n"
             "       type: Phaser.AUTO,\n"
             "       parent: 'game-container',\n"
@@ -44,8 +44,11 @@ async def generate_game(request: GameRequest):
             "       physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },\n"
             "       scene: { preload: preload, create: create, update: update }\n"
             "   };\n"
-            "   const game = new Phaser.Game(config);\n"
-            "3. GRÁFICOS: Dibuja los elementos usando 'this.add.graphics()' o formas básicas para garantizar que carguen siempre.\n"
+            "   if (window.currentGame) { window.currentGame.destroy(true); }\n"
+            "   window.currentGame = new Phaser.Game(config);\n"
+            "3. Declara las funciones preload(), create() y update() de forma limpia.\n"
+            "4. Dibuja los gráficos usando 'this.add.graphics()' y programa los controles táctiles con 'this.input.on(\"pointermove\", ...)'."
+        )
             "4. CONTROLES TÁCTILES: Usa 'this.input.on(\"pointermove\", ...)' o 'pointerdown' para mover al personaje con el dedo.\n"
             "5. Incluye puntuación, colisiones y lógica de juego completa."
         )
