@@ -1,5 +1,6 @@
 import os
 import re
+import traceback
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -14,9 +15,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configuración del cliente Groq con tu clave directa
+# Configuración del cliente Groq (puedes probar a poner la clave aquí temporalmente si en Render falla la variable)
+API_KEY = os.environ.get("GROQ_API_KEY", "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")
+
 client = openai.OpenAI(
-    api_key="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",
+    api_key=API_KEY,
     base_url="https://api.groq.com/openai/v1"
 )
 
@@ -74,7 +77,9 @@ async def generate_game(request: GameRequest):
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        error_detalles = traceback.format_exc()
+        print(error_detalles) # Se verá en los Logs de Render
+        raise HTTPException(status_code=500, detail=error_detalles)
 
 if __name__ == "__main__":
     import uvicorn
