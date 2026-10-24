@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from groq import Groq
 
-app = FastAPI(title="AI Game Generator API")
+app = FastAPI(title="AI Game Studio Multi-Agent API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -23,48 +23,56 @@ class GameRequest(BaseModel):
 
 @app.post("/generate-game")
 async def generate_game(request: GameRequest):
-    system_prompt = (
-        "Eres un desarrollador experto en Phaser 3. "
-        "Genera ÚNICAMENTE código JavaScript plano, moderno y sintácticamente perfecto para un juego arcade en 2D. "
-        "REGLAS ABSOLUTAS DE SINTAXIS Y FORMATO:\n"
-        "1. NO uses bloques de markdown como ```javascript o ```. Devuelve SOLO el código JS puro, sin ningún texto ni formato adicional.\n"
-        "2. NUNCA escribas asignaciones inválidas en el lado izquierdo. Por ejemplo, JAMÁS escribas expresiones como 'a + b = c' o 'funcion() = 5'. Usa siempre asignaciones de variables directas y correctas (ej: 'score += 1' o 'player.x = 100').\n"
-        "3. CONFIGURACIÓN OBLIGATORIA DE PHASER:\n"
-        "   const config = {\n"
-        "       type: Phaser.AUTO,\n"
-        "       parent: 'game-container',\n"
-        "       scale: {\n"
-        "           mode: Phaser.Scale.FIT,\n"
-        "           autoCenter: Phaser.Scale.CENTER_BOTH,\n"
-        "           width: 800,\n"
-        "           height: 600\n"
-        "       },\n"
-        "       physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },\n"
-        "       scene: { preload: preload, create: create, update: update }\n"
-        "   };\n"
-        "   if (window.currentGame) { window.currentGame.destroy(true); }\n"
-        "   window.currentGame = new Phaser.Game(config);\n"
-        "4. Define de forma limpia, separada e independiente las funciones preload(), create() y update()."
-    )
-
     try:
-        completion = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": request.prompt}
-            ],
-            temperature=0.4,
-            max_completion_tokens=2048,
-            top_p=1
+        # --- PASO 1: AGENTE PROGRAMADOR (Lógica base) ---
+        prompt_coder = (
+            "Eres un programador experto en Phaser 3. "
+            "Crea la estructura lógica y el bucle de un juego arcade en 2D basado en esta idea: " + request.prompt + ". "
+            "Usa la configuración estándar de Phaser con scale FIT, width 800, height 600. "
+            "Devuelve SOLO el código JS base, sin markdown."
         )
+        res1 = client.chat.completions.create(
+            model="openai/gpt-oss-120b",
+            messages=[{"role": "user", "content": prompt_coder}],
+            temperature=0.3,
+            max_completion_tokens=1500
+        )
+        base_code = res1.choices[0].message.content
 
-        raw_code = completion.choices[0].message.content
-        if not raw_code:
-            raise HTTPException(status_code=500, detail="La IA devolvió una respuesta vacía.")
+        # --- PASO 2: AGENTE DISEÑADOR VISUAL (Gráficos avanzados sin CORS) ---
+        prompt_designer = (
+            "Eres un artista visual y diseñador de videojuegos. Toma este código de Phaser 3 y enriquece los elementos visuales "
+            "utilizando 'this.add.graphics()', formas geométricas detalladas, colores vivos, efectos de brillo y partículas internas. "
+            "NO uses URLs externas de imágenes para evitar fallos de red. Todo debe dibujarse mediante código gráfico interno. "
+            "Código base:\n" + base_code + "\n"
+            "Devuelve SOLO el código JS mejorado visualmente, sin markdown."
+        )
+        res2 = client.chat.completions.create(
+            model="openai/gpt-oss-120b",
+            messages=[{"role": "user", "content": prompt_designer}],
+            temperature=0.4,
+            max_completion_tokens=1500
+        )
+        styled_code = res2.choices[0].message.content
 
-        # Limpieza estricta de bloques Markdown por seguridad
-        cleaned_code = re.sub(r"^```(?:javascript|js)?\n?", "", raw_code, flags=re.MULTILINE)
+        # --- PASO 3: AGENTE AUDITOR / DEPURADOR (Corrección de sintaxis) ---
+        prompt_reviewer = (
+            "Eres un revisor de código experto en JavaScript y Phaser 3. "
+            "Revisa exhaustivamente el siguiente código, corrige cualquier error de sintaxis (como asignaciones inválidas en el lado izquierdo tipo 'a+b=c') "
+            "y asegúrate de que la inicialización del juego y las funciones preload, create y update estén perfectamente estructuradas y limpias. "
+            "Código a revisar:\n" + styled_code + "\n"
+            "REGLA ABSOLUTA: Devuelve ÚNICAMENTE el código JavaScript final, limpio y 100% ejecutable, sin ningún bloque de markdown ni texto adicional."
+        )
+        res3 = client.chat.completions.create(
+            model="openai/gpt-oss-120b",
+            messages=[{"role": "user", "content": prompt_reviewer}],
+            temperature=0.1,
+            max_completion_tokens=2000
+        )
+        final_code = res3.choices[0].message.content
+
+        # Limpieza estricta de seguridad contra bloques markdown
+        cleaned_code = re.sub(r"^```(?:javascript|js)?\n?", "", final_code, flags=re.MULTILINE)
         cleaned_code = re.sub(r"```$", "", cleaned_code, flags=re.MULTILINE).strip()
 
         return {
@@ -75,7 +83,7 @@ async def generate_game(request: GameRequest):
         }
 
     except Exception as e:
-        print(f"Error detallado en el servidor: {str(e)}")
+        print(f"Error en pipeline multi-agente: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
