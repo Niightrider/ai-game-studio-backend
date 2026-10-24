@@ -24,7 +24,7 @@ class GameRequest(BaseModel):
 @app.post("/generate-game")
 async def generate_game(request: GameRequest):
     system_prompt = (
-        "Eres un desarrollador experto en Phaser 3. "
+        "Eres un desarrollador experto en Phaser 3 y diseñador de videojuegos pixel art. "
         "Genera ÚNICAMENTE código JavaScript plano y ejecutable para un juego arcade en 2D. "
         "REGLAS OBLIGATORIAS:\n"
         "1. NO uses bloques de markdown como ```javascript o ```. Devuelve SOLO el código JS puro.\n"
@@ -43,8 +43,12 @@ async def generate_game(request: GameRequest):
         "   };\n"
         "   if (window.currentGame) { window.currentGame.destroy(true); }\n"
         "   window.currentGame = new Phaser.Game(config);\n"
-        "3. Declara las funciones preload(), create() y update() de forma limpia.\n"
-        "4. Dibuja los gráficos usando 'this.add.graphics()' y programa los controles táctiles con 'this.input.on(\"pointermove\", ...)'."
+        "3. CARGA DE SPRITES POR IA (PRELOAD):\n"
+        "   En la función preload(), carga imágenes de alta calidad usando URLs públicas de IA para los elementos del juego. Ejemplo:\n"
+        "   this.load.image('player', 'https://image.pollinations.ai/prompt/pixel%20art%20spaceships%20game%20sprite,%20isolated,%20white%20background');\n"
+        "   this.load.image('enemy', 'https://image.pollinations.ai/prompt/pixel%20art%20meteorite%20rock,%20isolated,%20white%20background');\n"
+        "4. Utiliza estos sprites cargados con 'this.physics.add.sprite(x, y, 'key')' y escala sus tamaños adecuadamente (ej: sprite.setScale(0.5)).\n"
+        "5. Declara las funciones preload(), create() y update() limpiamente y programa los controles por ratón o táctiles."
     )
 
     try:
