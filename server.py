@@ -57,7 +57,7 @@ async def generate_game(request: GameRequest):
 
     try:
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="meta-llama/llama-prompt-guard-2-22m",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": request.prompt}
