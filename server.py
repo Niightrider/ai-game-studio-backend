@@ -55,7 +55,7 @@ async def generate_game(request: GameRequest):
         )
 
         response = client.chat.completions.create(
-            model="llama3-70b-8192",  # <--- Modelo universal y ultra estable
+            model="llama-3.1-70b-versatile",  # <--- Modelo actual y activo en Groq
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": request.prompt}
