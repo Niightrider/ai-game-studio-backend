@@ -14,9 +14,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configuración del cliente Groq
+# Configuración del cliente Groq con tu clave directa
 client = openai.OpenAI(
-    api_key=os.environ.get("GROQ_API_KEY"),
+    api_key="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",
     base_url="https://api.groq.com/openai/v1"
 )
 
