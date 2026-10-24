@@ -16,7 +16,7 @@ app.add_middleware(
 )
 
 # Configuración del cliente Groq (puedes probar a poner la clave aquí temporalmente si en Render falla la variable)
-API_KEY = os.environ.get("GROQ_API_KEY", "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")
+API_KEY = os.environ.get("GROQ_API_KEY", "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")
 
 client = openai.OpenAI(
     api_key=API_KEY,
