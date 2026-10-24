@@ -24,11 +24,12 @@ class GameRequest(BaseModel):
 @app.post("/generate-game")
 async def generate_game(request: GameRequest):
     system_prompt = (
-        "Eres un desarrollador experto en Phaser 3 y diseñador de videojuegos pixel art. "
-        "Genera ÚNICAMENTE código JavaScript plano y ejecutable para un juego arcade en 2D. "
+        "Eres un desarrollador experto en Phaser 3. "
+        "Genera ÚNICAMENTE código JavaScript plano, moderno y sintácticamente perfecto para un juego arcade en 2D. "
         "REGLAS OBLIGATORIAS:\n"
         "1. NO uses bloques de markdown como ```javascript o ```. Devuelve SOLO el código JS puro.\n"
-        "2. CONFIGURACIÓN DE PHASER:\n"
+        "2. NUNCA hagas asignaciones inválidas (como asignar valores a funciones o constantes).\n"
+        "3. CONFIGURACIÓN DE PHASER:\n"
         "   const config = {\n"
         "       type: Phaser.AUTO,\n"
         "       parent: 'game-container',\n"
@@ -43,12 +44,11 @@ async def generate_game(request: GameRequest):
         "   };\n"
         "   if (window.currentGame) { window.currentGame.destroy(true); }\n"
         "   window.currentGame = new Phaser.Game(config);\n"
-        "3. CARGA DE SPRITES POR IA (PRELOAD):\n"
-        "   En la función preload(), carga imágenes de alta calidad usando URLs públicas de IA para los elementos del juego. Ejemplo:\n"
-        "   this.load.image('player', 'https://image.pollinations.ai/prompt/pixel%20art%20spaceships%20game%20sprite,%20isolated,%20white%20background');\n"
-        "   this.load.image('enemy', 'https://image.pollinations.ai/prompt/pixel%20art%20meteorite%20rock,%20isolated,%20white%20background');\n"
-        "4. Utiliza estos sprites cargados con 'this.physics.add.sprite(x, y, 'key')' y escala sus tamaños adecuadamente (ej: sprite.setScale(0.5)).\n"
-        "5. Declara las funciones preload(), create() y update() limpiamente y programa los controles por ratón o táctiles."
+        "4. CARGA DE SPRITES:\n"
+        "   Usa URLs limpias en preload():\n"
+        "   this.load.image('player', 'https://image.pollinations.ai/prompt/pixel%20art%20character,%20isolated,%20white%20background');\n"
+        "   this.load.image('enemy', 'https://image.pollinations.ai/prompt/pixel%20art%20enemy,%20isolated,%20white%20background');\n"
+        "5. Define estrictamente las funciones preload(), create() y update() de forma independiente."
     )
 
     try:
